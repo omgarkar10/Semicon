@@ -6,7 +6,7 @@ import torch
 from torch import nn
 
 from semicon.models.blocks import (
-    ChannelAttention,
+    CBAM,
     NoiseEstimator,
     PixelShuffleUpsampler,
     RRDB,
@@ -17,20 +17,25 @@ from semicon.models.blocks import (
 class RRDBRestorer(nn.Module):
     """Joint speckle denoising + exact 2x super-resolution.
 
-    Pipeline: noise estimate → subtract at LR → RRDB trunk (channel attention
+    Pipeline: noise estimate → subtract at LR → RRDB trunk (CBAM attention
     every ``attn_every`` blocks) → PixelShuffle 2x → residual over bicubic skip.
+    
+    Upgrades:
+    - CBAM (Channel + Spatial attention) replaces pure ChannelAttention
+    - Deeper NoiseEstimator for better speckle decoupling
+    - Larger capacity (num_feat=96, num_block=16 by default)
     """
 
     def __init__(
         self,
         in_channels: int = 1,
         out_channels: int = 1,
-        num_feat: int = 64,
-        num_block: int = 8,
-        num_grow_ch: int = 32,
+        num_feat: int = 96,
+        num_block: int = 16,
+        num_grow_ch: int = 48,
         scale: int = 2,
         residual_scale: float = 0.2,
-        attn_every: int = 3,
+        attn_every: int = 4,
         noise_feat: int = 32,
     ) -> None:
         super().__init__()
@@ -43,7 +48,8 @@ class RRDBRestorer(nn.Module):
         for i in range(num_block):
             trunk.append(RRDB(num_feat, num_grow_ch, residual_scale))
             if attn_every > 0 and (i + 1) % attn_every == 0:
-                trunk.append(ChannelAttention(num_feat))
+                # CBAM: Channel Attention + Spatial Attention for defect-region focus
+                trunk.append(CBAM(num_feat, reduction=16, spatial_kernel=7))
         self.rrdb_blocks = nn.Sequential(*trunk)
         self.conv_trunk = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
         self.upsample = PixelShuffleUpsampler(num_feat, scale=scale)

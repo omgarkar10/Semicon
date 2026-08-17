@@ -41,6 +41,7 @@ class RRDB(nn.Module):
 
 
 class ChannelAttention(nn.Module):
+    """Squeeze-and-Excitation channel attention."""
     def __init__(self, num_feat: int, reduction: int = 16) -> None:
         super().__init__()
         hidden = max(num_feat // reduction, 4)
@@ -56,6 +57,46 @@ class ChannelAttention(nn.Module):
         return x * self.fc(self.pool(x))
 
 
+class SpatialAttention(nn.Module):
+    """Spatial attention using max-pool + avg-pool along the channel dimension.
+    
+    Allows the network to focus on defect regions (high-contrast edges) and
+    suppress homogeneous noise regions — critical for semiconductor inspection.
+    """
+    def __init__(self, kernel_size: int = 7) -> None:
+        super().__init__()
+        assert kernel_size in (3, 7), "Kernel size must be 3 or 7"
+        padding = (kernel_size - 1) // 2
+        self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Compute max and mean pooling along channel dim
+        max_pool = torch.amax(x, dim=1, keepdim=True)
+        avg_pool = torch.mean(x, dim=1, keepdim=True)
+        pooled = torch.cat([avg_pool, max_pool], dim=1)
+        attention = self.sigmoid(self.conv(pooled))
+        return x * attention
+
+
+class CBAM(nn.Module):
+    """Convolutional Block Attention Module.
+    
+    Applies Channel Attention then Spatial Attention sequentially.
+    This dual-attention mechanism allows the model to simultaneously select
+    WHAT information is important (channels) and WHERE it is (spatial regions).
+    """
+    def __init__(self, num_feat: int, reduction: int = 16, spatial_kernel: int = 7) -> None:
+        super().__init__()
+        self.channel_att = ChannelAttention(num_feat, reduction)
+        self.spatial_att = SpatialAttention(spatial_kernel)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.channel_att(x)
+        x = self.spatial_att(x)
+        return x
+
+
 class NoiseEstimator(nn.Module):
     """Lightweight speckle/Gaussian noise map at LR resolution."""
 
@@ -63,6 +104,8 @@ class NoiseEstimator(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, num_feat, 3, 1, 1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(num_feat, num_feat, 3, 1, 1),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(num_feat, num_feat, 3, 1, 1),
             nn.LeakyReLU(0.2, inplace=True),
