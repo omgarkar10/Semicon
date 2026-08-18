@@ -17,8 +17,14 @@ weights/*.pt
 weights/*.pth
 weights/*.ckpt
 !weights/.gitkeep
+models/*.pt
+models/*.pth
+models/*.ckpt
+!models/.gitkeep
 outputs/
 restored/
+RestoredOutputs/
+tmp_input/
 runs/
 *.log
 .DS_Store
