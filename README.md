@@ -1,7 +1,7 @@
 # AI-Based Restoration of Degraded Images for Semiconductor Inspection
 
-**Team/Developer:** Vijay garkar  
-**Project:** SEMICON India Hackathon 2026
+**Team/Developer:**Om Vijay garkar & Vedant Sanjay Pawale
+**Project:** AI-Based Restoration of Degraded Images for Semiconductor Inspection
 
 ## Overview
 This repository contains a state-of-the-art AI solution for restoring degraded semiconductor inspection images. The core architecture utilizes a highly optimized **Residual-in-Residual Dense Block (RRDB) network** with **CBAM (Convolutional Block Attention)** that simultaneously handles **Speckle Noise**, **Gaussian Noise**, and **Spatial Resolution Reduction (2×)** — while preserving structural fidelity and defect boundaries without hallucination.
