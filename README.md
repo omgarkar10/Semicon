@@ -55,6 +55,35 @@ python scripts/train.py --config configs/default.yaml
 
 Training runs for 150 epochs with automatic mixed precision, cosine annealing LR schedule with 5-epoch linear warmup, and gradient clipping. Best model is saved automatically to both `weights/` and `models/`.
 
+### 4. Web Application (FastAPI + Frontend)
+
+Install dependencies and start the API server:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+uvicorn backend.api:app --host 0.0.0.0 --port 8000
+```
+
+Open **http://localhost:8000/** in your browser.
+
+- Upload a degraded `.npy` file (`(H, W)` or `(H, W, 1)`)
+- Click **Restore image** to run 8-fold TTA inference
+- Download the restored `.npy` result
+
+If `models/best_model.pth` is missing, train first:
+
+```bash
+python scripts/train.py --config configs/default.yaml
+```
+
+For a short CPU bootstrap checkpoint:
+
+```bash
+python scripts/bootstrap_checkpoint.py --config configs/default.yaml --max-batches 8
+```
+
 ---
 
 ## 📂 Submission Checklist

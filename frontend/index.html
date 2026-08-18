@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEMICON AI — Semiconductor Image Restoration</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <p class="brand-kicker">SEMICON AI</p>
+        <p class="brand-subtitle">Semiconductor Image Restoration</p>
+      </div>
+      <div class="status-pill" id="backend-status" aria-live="polite">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Checking</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">I4C Hackathon 2026</p>
+          <h1>AI-Based Semiconductor<br>Image Restoration</h1>
+          <p class="hero-copy">
+            Restore degraded grayscale semiconductor inspection imagery using the trained
+            RRDB restoration model with CBAM attention and 8-fold test-time augmentation.
+          </p>
+        </div>
+        <ol class="workflow-steps" aria-label="Workflow steps">
+          <li><span>01</span> Upload</li>
+          <li><span>02</span> Inspect</li>
+          <li><span>03</span> Restore</li>
+          <li><span>04</span> Export</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <div class="container panel-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Upload</h2>
+            <p>Drop a degraded <code>.npy</code> array or browse from disk.</p>
+          </div>
+
+          <div
+            class="dropzone"
+            id="dropzone"
+            tabindex="0"
+            role="button"
+            aria-label="Upload NumPy file"
+          >
+            <input type="file" id="file-input" accept=".npy" hidden>
+            <p class="dropzone-title">Drag and drop your <code>.npy</code> file here</p>
+            <p class="dropzone-subtitle">Supported shapes: <code>(H, W)</code> or <code>(H, W, 1)</code></p>
+            <button type="button" class="btn btn-secondary" id="browse-btn">Browse file</button>
+          </div>
+
+          <dl class="file-meta" id="file-meta" hidden>
+            <div><dt>Filename</dt><dd id="meta-filename">—</dd></div>
+            <div><dt>File size</dt><dd id="meta-size">—</dd></div>
+            <div><dt>Array shape</dt><dd id="meta-shape">—</dd></div>
+          </dl>
+
+          <div class="action-row">
+            <button type="button" class="btn btn-primary" id="restore-btn" disabled>
+              Restore image
+            </button>
+            <p class="status-message" id="restore-status" aria-live="polite"></p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Input preview</h2>
+            <p>Client-side preview only. Uploaded bytes are sent unchanged to the backend.</p>
+          </div>
+          <div class="preview-frame">
+            <canvas id="input-canvas" width="320" height="320" aria-label="Input preview"></canvas>
+            <p class="preview-placeholder" id="input-placeholder">No file selected</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <div class="container">
+        <div class="panel-header">
+          <h2>Comparison</h2>
+          <p>Side-by-side view of degraded input and restored output.</p>
+        </div>
+        <div class="comparison-grid">
+          <figure class="preview-card">
+            <figcaption>Degraded input</figcaption>
+            <div class="preview-frame">
+              <canvas id="compare-input-canvas" width="320" height="320" aria-label="Degraded input"></canvas>
+              <p class="preview-placeholder" id="compare-input-placeholder">Awaiting upload</p>
+            </div>
+          </figure>
+          <figure class="preview-card">
+            <figcaption>Restored output</figcaption>
+            <div class="preview-frame">
+              <img id="output-image" alt="Restored output preview" hidden>
+              <p class="preview-placeholder" id="output-placeholder">Run restoration to preview</p>
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <div class="container panel-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Inference metadata</h2>
+            <p>Values reported by the backend for the latest request.</p>
+          </div>
+          <dl class="metadata-grid" id="metadata-grid">
+            <div><dt>Input resolution</dt><dd id="meta-input-res">—</dd></div>
+            <div><dt>Output resolution</dt><dd id="meta-output-res">—</dd></div>
+            <div><dt>Inference time</dt><dd id="meta-time">—</dd></div>
+            <div><dt>Execution device</dt><dd id="meta-device">—</dd></div>
+            <div><dt>TTA count</dt><dd id="meta-tta">—</dd></div>
+          </dl>
+          <button type="button" class="btn btn-secondary" id="download-btn" disabled>
+            Download restored .npy
+          </button>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Performance</h2>
+            <p>Quality metrics require ground-truth data for this request.</p>
+          </div>
+          <div class="notice">
+            Quality metrics unavailable for this inference request.
+          </div>
+          <p class="muted-copy">
+            PSNR, SSIM, and LPIPS require paired ground-truth imagery and are not computed
+            during unpaired restoration uploads.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <div class="container">
+        <div class="panel-header">
+          <h2>Technical architecture</h2>
+          <p>Components present in this repository.</p>
+        </div>
+        <div class="architecture-flow" aria-label="Model pipeline">
+          <div class="arch-step">Input</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">NoiseEstimator</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">RRDB Trunk</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">CBAM Attention</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">PixelShuffle 2× SR</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">8× TTA</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-step">Restored image</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>SEMICON AI · Semiconductor Image Restoration · I4C Hackathon 2026</p>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
